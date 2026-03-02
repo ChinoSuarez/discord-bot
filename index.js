@@ -78,18 +78,19 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
+
       await command.execute(interaction);
     }
 
     // BUTTONS
-    if (interaction.isButton()) {
+    else if (interaction.isButton()) {
       for (const handler of buttonHandlers) {
         await handler(interaction);
       }
     }
 
     // MODALS
-    if (interaction.isModalSubmit()) {
+    else if (interaction.isModalSubmit()) {
       for (const handler of modalHandlers) {
         await handler(interaction);
       }
@@ -98,16 +99,18 @@ client.on(Events.InteractionCreate, async interaction => {
   } catch (error) {
     console.error("❌ Interaction error:", error);
 
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({
-        content: "❌ An error occurred.",
-        ephemeral: true
-      });
-    } else {
-      await interaction.reply({
-        content: "❌ An error occurred.",
-        ephemeral: true
-      });
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({
+          content: "❌ An unexpected error occurred."
+        });
+      } else {
+        await interaction.reply({
+          content: "❌ An unexpected error occurred."
+        });
+      }
+    } catch (err) {
+      console.error("❌ Failed to send error response:", err);
     }
   }
 });
