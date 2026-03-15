@@ -83,18 +83,22 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // BUTTONS
-    else if (interaction.isButton()) {
-      for (const handler of buttonHandlers) {
-        await handler(interaction);
+      else if (interaction.isButton()) {
+        for (const handler of buttonHandlers) {
+          await handler(interaction);
+
+          if (interaction.replied || interaction.deferred) break;
+        }
       }
-    }
 
     // MODALS
-    else if (interaction.isModalSubmit()) {
-      for (const handler of modalHandlers) {
-        await handler(interaction);
+      else if (interaction.isModalSubmit()) {
+        for (const handler of modalHandlers) {
+          await handler(interaction);
+
+          if (interaction.replied || interaction.deferred) break;
+        }
       }
-    }
 
   } catch (error) {
     console.error("❌ Interaction error:", error);
