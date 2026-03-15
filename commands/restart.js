@@ -33,7 +33,7 @@ module.exports = {
     console.log(`Bot restart triggered by ${interaction.user.tag}`);
 
     setTimeout(() => {
-      process.exit(0);
+      process.exit(1);
     }, 3000);
   }
 };
