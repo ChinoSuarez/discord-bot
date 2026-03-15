@@ -63,9 +63,22 @@ for (const file of commandFiles) {
    READY
    =============================== */
 
-client.once(Events.ClientReady, () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-});
+    client.once(Events.ClientReady, async () => {
+      console.log(`✅ Logged in as ${client.user.tag}`);
+
+      const restartChannel = "1470750976368578630"; // channel where restart messages go
+
+      try {
+        const channel = await client.channels.fetch(restartChannel);
+
+        await channel.send({
+          content: "✅ **Gatekeeper is now back online.**"
+        });
+
+      } catch (err) {
+        console.error("Failed to send restart confirmation:", err);
+      }
+    });
 
 /* ===============================
    INTERACTION HANDLER
