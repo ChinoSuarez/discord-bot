@@ -26,20 +26,35 @@ module.exports = {
       return interaction.editReply("❌ Whitelist channel not found.");
     }
 
-    const messages = await channel.messages.fetch({ limit: 100 });
+    let lastId;
+    let application = null;
 
-    const application = messages.find(msg => {
-      if (!msg.embeds.length) return false;
+    while (true) {
 
-      const embed = msg.embeds[0];
-      const fields = embed.data.fields || [];
+      const options = { limit: 100 };
+      if (lastId) options.before = lastId;
 
-      const userField = fields.find(f =>
-        f.value?.includes("Discord User:")
-      );
+      const messages = await channel.messages.fetch(options);
 
-      return userField?.value.includes(`<@${target.id}>`);
-    });
+      if (!messages.size) break;
+
+      application = messages.find(msg => {
+        if (!msg.embeds.length) return false;
+
+        const embed = msg.embeds[0];
+        const fields = embed.data.fields || [];
+
+        const userField = fields.find(f =>
+          f.value?.includes("Discord User:")
+        );
+
+        return userField?.value.includes(`<@${target.id}>`);
+      });
+
+      if (application) break;
+
+      lastId = messages.last().id;
+    }
 
     if (!application) {
       return interaction.editReply("❌ No application found for this user.");
@@ -63,7 +78,7 @@ module.exports = {
     const result = new EmbedBuilder()
       .setColor(0xff8c00)
       .setAuthor({
-        name: "WHITELIST APPLICATION",
+        name: "WHITELIST APPLICATION LOOKUP",
         iconURL: interaction.guild.iconURL({ dynamic: true })
       })
       .setThumbnail(
@@ -73,7 +88,7 @@ module.exports = {
         { name: "DISCORD USER", value: `<@${target.id}>` },
         { name: "CHARACTER NAME", value: characterName },
         { name: "STEAM PROFILE", value: `[Steam Profile](${steamProfile})` },
-        { name: "VOUCHERS", value: vouchers }
+        { name: "VOUCHERS", value: `\n${vouchers.replace(/, /g, "\n")}` }
       )
       .setFooter({ text: "Poblacion City Roleplay" })
       .setTimestamp();
