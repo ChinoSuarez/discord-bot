@@ -8,6 +8,9 @@ module.exports = {
 
   async execute(interaction) {
 
+    // Prevent Discord timeout
+    await interaction.deferReply();
+
     try {
 
       await pool.query(`
@@ -19,17 +22,17 @@ module.exports = {
         )
       `);
 
-      await interaction.reply({
-        content: "✅ Whitelist database table created successfully."
-      });
+      await interaction.editReply(
+        "✅ Whitelist database table created successfully."
+      );
 
     } catch (error) {
 
       console.error("Database error:", error);
 
-      await interaction.reply({
-        content: "❌ Failed to create whitelist database."
-      });
+      await interaction.editReply(
+        "❌ Failed to create whitelist database."
+      );
 
     }
 
