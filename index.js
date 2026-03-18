@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
+const messageFilter = require("./interactions/messageFilter");
 
 const {
   Client,
@@ -21,22 +22,31 @@ const client = new Client({
   ]
 });
 
+client.on("messageCreate", async (message) => {
+  try {
+    await messageFilter(message);
+  } catch (error) {
+    console.error("❌ Message filter error:", error);
+  }
+});
+
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
 /* ===============================
    LOAD BUTTON & MODAL HANDLERS
-   (FLAT STRUCTURE)
    =============================== */
 
 const buttonHandlers = [
   require("./interactions/buttons"),
-  require("./interactions/nameChangeButtons")
+  require("./interactions/nameChangeButtons"),
+  require("./interactions/roleRequestButtons")
 ];
 
 const modalHandlers = [
   require("./interactions/modals"),
-  require("./interactions/nameChangeModals")
+  require("./interactions/nameChangeModals"),
+  require("./interactions/roleRequestModals")
 ];
 
 /* ===============================
@@ -59,26 +69,28 @@ for (const file of commandFiles) {
   }
 }
 
-/* ===============================
-   READY
-   =============================== */
+/*   READY - RESTART THE BOT   */
 
-    client.once(Events.ClientReady, async () => {
-      console.log(`✅ Logged in as ${client.user.tag}`);
+  client.once(Events.ClientReady, async () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
 
-      const restartChannel = "1470750976368578630"; // channel where restart messages go
+  const restartChannels = [
+    "1470750976368578630",
+    "1464856733145895129",
+    "1469617732206203039"
+  ];
 
-      try {
-        const channel = await client.channels.fetch(restartChannel);
+  try {
+    const channel = await client.channels.fetch(restartChannel);
 
-        await channel.send({
-          content: "✅ **Gatekeeper is now back online.**"
-        });
-
-      } catch (err) {
-        console.error("Failed to send restart confirmation:", err);
-      }
+    await channel.send({
+      content: "✅ **Gatekeeper is now back online.**"
     });
+
+  } catch (err) {
+    console.error("Failed to send restart confirmation:", err);
+  }
+});
 
 /* ===============================
    INTERACTION HANDLER
@@ -96,38 +108,36 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // BUTTONS
-      else if (interaction.isButton()) {
-        for (const handler of buttonHandlers) {
-          await handler(interaction);
+    else if (interaction.isButton()) {
+      for (const handler of buttonHandlers) {
+        await handler(interaction);
 
-          if (interaction.replied || interaction.deferred) break;
-        }
+        if (interaction.replied || interaction.deferred) break;
       }
+    }
 
     // MODALS
-      else if (interaction.isModalSubmit()) {
-        for (const handler of modalHandlers) {
-          await handler(interaction);
+    else if (interaction.isModalSubmit()) {
+      for (const handler of modalHandlers) {
+        await handler(interaction);
 
-          if (interaction.replied || interaction.deferred) break;
-        }
+        if (interaction.replied || interaction.deferred) break;
       }
+    }
 
   } catch (error) {
     console.error("❌ Interaction error:", error);
 
+    // SAFE ERROR RESPONSE (prevents Unknown Interaction)
     try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({
-          content: "❌ An unexpected error occurred."
-        });
-      } else {
+      if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          content: "❌ An unexpected error occurred."
+          content: "❌ An unexpected error occurred.",
+          flags: 64
         });
       }
     } catch (err) {
-      console.error("❌ Failed to send error response:", err);
+      console.error("❌ Failed to respond to interaction:", err);
     }
   }
 });
