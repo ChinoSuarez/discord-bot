@@ -32,6 +32,23 @@ module.exports = async (interaction) => {
       const steamProfile = interaction.fields.getTextInputValue("steam_profile");
       const vouchedBy = "None";
 
+      const fs = require("fs");
+      const DB = "./data/whitelist.json";
+
+      let database = {};
+
+      if (fs.existsSync(DB)) {
+        database = JSON.parse(fs.readFileSync(DB));
+      }
+
+      database[interaction.user.id] = {
+        character: characterName,
+        steam: steamProfile,
+        vouchers: "None"
+      };
+
+fs.writeFileSync(DB, JSON.stringify(database, null, 2));
+
       /* VALIDATION */
 
       /* Age check
