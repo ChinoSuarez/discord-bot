@@ -1,8 +1,6 @@
 const { SlashCommandBuilder } = require("discord.js");
-const fs = require("fs");
+const pool = require("../database");
 const config = require("../config.json");
-
-const DB = "./data/whitelist.json";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -11,69 +9,72 @@ module.exports = {
 
   async execute(interaction) {
 
-    await interaction.reply({
-      content: "Importing whitelist applications...",
-      flags: 64
-    });
+    await interaction.deferReply();
 
-    const channel = await interaction.client.channels.fetch(config.whitelistChannelId);
+    try {
 
-    let database = JSON.parse(fs.readFileSync(DB));
+      const channel = await interaction.client.channels.fetch(config.whitelistChannelId);
 
-    let lastId;
-    let imported = 0;
+      let lastId;
+      let imported = 0;
 
-    while (true) {
+      while (true) {
 
-      const options = { limit: 100 };
-      if (lastId) options.before = lastId;
+        const options = { limit: 100 };
+        if (lastId) options.before = lastId;
 
-      const messages = await channel.messages.fetch(options);
+        const messages = await channel.messages.fetch(options);
+        if (!messages.size) break;
 
-      if (!messages.size) break;
+        for (const msg of messages.values()) {
 
-      for (const msg of messages.values()) {
+          if (!msg.embeds.length) continue;
 
-        if (!msg.embeds.length) continue;
+          const embed = msg.embeds[0];
+          const fields = embed.data.fields || [];
 
-        const embed = msg.embeds[0];
-        const fields = embed.data.fields || [];
+          const userField = fields.find(f => f.value?.includes("Discord User:"));
+          const charField = fields.find(f => f.value?.includes("Character Name:"));
+          const steamField = fields.find(f => f.value?.includes("Steam Profile"));
+          const vouchField = fields.find(f => f.name?.includes("VOUCHED BY"));
 
-        const userField = fields.find(f => f.value?.includes("Discord User:"));
-        const charField = fields.find(f => f.value?.includes("Character Name:"));
-        const steamField = fields.find(f => f.value?.includes("Steam Profile"));
-        const vouchField = fields.find(f => f.name?.includes("VOUCHED BY"));
+          if (!userField) continue;
 
-        if (!userField) continue;
+          const userId = userField.value.match(/\d+/)?.[0];
+          if (!userId) continue;
 
-        const userId = userField.value.match(/\d+/)?.[0];
-        if (!userId) continue;
+          const character =
+            charField?.value.split("Character Name:")[1]?.split("\n")[0]?.trim() || "Unknown";
 
-        const character =
-          charField?.value.split("Character Name:")[1]?.split("\n")[0]?.trim() || "Unknown";
+          const steam =
+            steamField?.value.match(/\((.*?)\)/)?.[1] || "Unknown";
 
-        const steam =
-          steamField?.value.match(/\((.*?)\)/)?.[1] || "Unknown";
+          const vouchers = vouchField?.value || "None";
 
-        const vouchers = vouchField?.value || "None";
+          await pool.query(
+            `INSERT INTO whitelist (discord_id, character_name, steam_profile, vouchers)
+             VALUES ($1,$2,$3,$4)
+             ON CONFLICT (discord_id)
+             DO NOTHING`,
+            [userId, character, steam, vouchers]
+          );
 
-        database[userId] = {
-          character,
-          steam,
-          vouchers
-        };
+          imported++;
 
-        imported++;
+        }
+
+        lastId = messages.last().id;
+
       }
 
-      lastId = messages.last().id;
+      await interaction.editReply(`✅ Imported ${imported} whitelist applications.`);
+
+    } catch (error) {
+
+      console.error(error);
+      await interaction.editReply("❌ Failed to import whitelist applications.");
+
     }
 
-    fs.writeFileSync(DB, JSON.stringify(database, null, 2));
-
-    interaction.followUp({
-      content: `Imported ${imported} applications.`,
-      flags: 64
-    });
   }
 };
