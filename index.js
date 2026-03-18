@@ -35,18 +35,17 @@ process.on("uncaughtException", console.error);
 
 /* ===============================
    LOAD BUTTON & MODAL HANDLERS
+   (FLAT STRUCTURE)
    =============================== */
 
 const buttonHandlers = [
   require("./interactions/buttons"),
-  require("./interactions/nameChangeButtons"),
-  require("./interactions/roleRequestButtons")
+  require("./interactions/nameChangeButtons")
 ];
 
 const modalHandlers = [
   require("./interactions/modals"),
-  require("./interactions/nameChangeModals"),
-  require("./interactions/roleRequestModals")
+  require("./interactions/nameChangeModals")
 ];
 
 /* ===============================
@@ -69,28 +68,26 @@ for (const file of commandFiles) {
   }
 }
 
-/*   READY - RESTART THE BOT   */
+/* ===============================
+   READY
+   =============================== */
 
-  client.once(Events.ClientReady, async () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
+    client.once(Events.ClientReady, async () => {
+      console.log(`✅ Logged in as ${client.user.tag}`);
 
-  const restartChannels = [
-    "1470750976368578630",
-    "1464856733145895129",
-    "1469617732206203039"
-  ];
+      const restartChannel = "1470750976368578630"; // channel where restart messages go
 
-  try {
-    const channel = await client.channels.fetch(restartChannel);
+      try {
+        const channel = await client.channels.fetch(restartChannel);
 
-    await channel.send({
-      content: "✅ **Gatekeeper is now back online.**"
+        await channel.send({
+          content: "✅ **Gatekeeper is now back online.**"
+        });
+
+      } catch (err) {
+        console.error("Failed to send restart confirmation:", err);
+      }
     });
-
-  } catch (err) {
-    console.error("Failed to send restart confirmation:", err);
-  }
-});
 
 /* ===============================
    INTERACTION HANDLER
@@ -108,36 +105,38 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // BUTTONS
-    else if (interaction.isButton()) {
-      for (const handler of buttonHandlers) {
-        await handler(interaction);
+      else if (interaction.isButton()) {
+        for (const handler of buttonHandlers) {
+          await handler(interaction);
 
-        if (interaction.replied || interaction.deferred) break;
+          if (interaction.replied || interaction.deferred) break;
+        }
       }
-    }
 
     // MODALS
-    else if (interaction.isModalSubmit()) {
-      for (const handler of modalHandlers) {
-        await handler(interaction);
+      else if (interaction.isModalSubmit()) {
+        for (const handler of modalHandlers) {
+          await handler(interaction);
 
-        if (interaction.replied || interaction.deferred) break;
+          if (interaction.replied || interaction.deferred) break;
+        }
       }
-    }
 
   } catch (error) {
     console.error("❌ Interaction error:", error);
 
-    // SAFE ERROR RESPONSE (prevents Unknown Interaction)
     try {
-      if (!interaction.replied && !interaction.deferred) {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({
+          content: "❌ An unexpected error occurred."
+        });
+      } else {
         await interaction.reply({
-          content: "❌ An unexpected error occurred.",
-          flags: 64
+          content: "❌ An unexpected error occurred."
         });
       }
     } catch (err) {
-      console.error("❌ Failed to respond to interaction:", err);
+      console.error("❌ Failed to send error response:", err);
     }
   }
 });
