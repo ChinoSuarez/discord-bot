@@ -1,11 +1,5 @@
 /* PROJECT POBLACION - DISCORD BOT */
 
-/*========================================================
-  DISCORD WHITELISTING SYSTEM
-  ========================================================*/
-
-  /* MAIN MODAL CONFIGURATION */
-
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -13,95 +7,80 @@ const {
   ButtonStyle
 } = require("discord.js");
 
-  const config = require("../config.json");
-  const cooldowns = new Map();
-  const COOLDOWN_TIME = 1 * 60 * 1000; // 1 minute
-
+const config = require("../config.json");
+const pool = require("../database"); // ✅ DATABASE
+const cooldowns = new Map();
+const COOLDOWN_TIME = 1 * 60 * 1000;
 
 module.exports = async (interaction) => {
   if (!interaction.isModalSubmit()) return;
 
-  // WHITELIST MODALS
+  /* =========================
+     WHITELIST SUBMIT
+  ========================= */
 
   if (interaction.customId === "whitelist_submit") {
 
-    /* APPLICATION FORM INPUTS */
-    
-      const characterName = interaction.fields.getTextInputValue("character_name");
-      const age = interaction.fields.getTextInputValue("age");
-      const steamProfile = interaction.fields.getTextInputValue("steam_profile");
-      const vouchedBy = "None";
+    await interaction.deferReply({ flags: 64 }); // prevent timeout
 
-      const fs = require("fs");
-      const DB = "./data/whitelist.json";
+    const characterName = interaction.fields.getTextInputValue("character_name");
+    const age = interaction.fields.getTextInputValue("age");
+    const steamProfile = interaction.fields.getTextInputValue("steam_profile");
 
-      let database = {};
+    /* VALIDATION */
 
-      if (fs.existsSync(DB)) {
-        database = JSON.parse(fs.readFileSync(DB));
-      }
+    if (isNaN(age)) {
+      return interaction.editReply("❌ Character age must be a number.");
+    }
 
-      database[interaction.user.id] = {
-        character: characterName,
-        steam: steamProfile,
-        vouchers: "None"
-      };
+    if (
+      !steamProfile.startsWith("https://steamcommunity.com/id/") &&
+      !steamProfile.startsWith("https://steamcommunity.com/profiles/")
+    ) {
+      return interaction.editReply("❌ Please provide a valid Steam profile link.");
+    }
 
-fs.writeFileSync(DB, JSON.stringify(database, null, 2));
+    /* SAVE TO DATABASE ✅ */
 
-      /* VALIDATION */
+    try {
 
-      /* Age check
-      if (isNaN(age) || Number(age) < 18) {
-        return interaction.reply({
-          content: "❌ Character age must be a number and at least 18.",
-          flags: 64
-        });
-      }*/
+      await pool.query(
+        `INSERT INTO whitelist (discord_id, character_name, steam_profile, vouchers)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (discord_id)
+         DO UPDATE SET
+         character_name = EXCLUDED.character_name,
+         steam_profile = EXCLUDED.steam_profile`,
+        [
+          interaction.user.id,
+          characterName,
+          steamProfile,
+          "None"
+        ]
+      );
 
-      if (isNaN(age)) {
-      return interaction.reply({
-          content: "❌ Character age must be a number.",
-           flags: 64
-       });
-      }
+    } catch (err) {
+      console.error("DB SAVE ERROR:", err);
+      return interaction.editReply("❌ Failed to save application.");
+    }
 
-      // Steam profile link check
-      if (
-        !steamProfile.startsWith("https://steamcommunity.com/id/") &&
-        !steamProfile.startsWith("https://steamcommunity.com/profiles/")
-      ) {
-        return interaction.reply({
-          content: "❌ Please provide a valid Steam profile link.",
-          flags: 64
-        });
-      }
+    /* COOLDOWN */
 
-      // ✅ START COOLDOWN AFTER SUCCESSFUL SUBMIT
-      const userId = interaction.user.id;
-      const now = Date.now();
+    const userId = interaction.user.id;
+    cooldowns.set(userId, Date.now());
+    setTimeout(() => cooldowns.delete(userId), COOLDOWN_TIME);
 
-      cooldowns.set(userId, now);
-      setTimeout(() => cooldowns.delete(userId), COOLDOWN_TIME);
-
-    /* DISCORD ACCOUNT AGE ON EMBED */
+    /* ACCOUNT AGE */
 
     const createdAt = interaction.user.createdAt;
-    const currentDate = new Date();
-
-    const diffMs = currentDate - createdAt;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24));
     const diffYears = Math.floor(diffDays / 365);
     const diffMonths = Math.floor((diffDays % 365) / 30);
-
     const accountAge = `${diffYears} year(s), ${diffMonths} month(s)`;
 
-    /* EMBED SPACER */
-
-    const DIVIDER = "";
     const SPACE = "\u200B";
 
-    /* MAIN EMBED AFTER SUBMIT */
+    /* EMBED */
 
     const embed = new EmbedBuilder()
       .setColor(0xff8c00)
@@ -109,9 +88,7 @@ fs.writeFileSync(DB, JSON.stringify(database, null, 2));
         name: "[ NEW WHITELIST APPLICATION ]",
         iconURL: interaction.guild.iconURL({ dynamic: true })
       })
-      .setThumbnail(
-        interaction.user.displayAvatarURL({ dynamic: true, size: 256 })
-      )
+      .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
       .addFields(
         { name: SPACE, value: "👤 **APPLICANT INFORMATION:**" },
         {
@@ -145,63 +122,37 @@ fs.writeFileSync(DB, JSON.stringify(database, null, 2));
 
         {
           name: "👥 **VOUCHED BY:**",
-          value: vouchedBy,
-          inline: false
+          value: "None"
         }
       )
-      .setFooter({
-        text: "Poblacion City Roleplay"
-      })
+      .setFooter({ text: "Poblacion City Roleplay" })
       .setTimestamp();
 
     /* BUTTONS */
 
     const buttons = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("vouch")
-        .setLabel("Vouch")
-        .setEmoji("🖐️")
-        .setStyle(ButtonStyle.Primary),
-
-      new ButtonBuilder()
-        .setCustomId("approve")
-        .setLabel("Approve")
-        .setEmoji("✅")
-        .setStyle(ButtonStyle.Success),
-
-      new ButtonBuilder()
-        .setCustomId("deny")
-        .setLabel("Deny")
-        .setEmoji("✖️")
-        .setStyle(ButtonStyle.Danger)
+      new ButtonBuilder().setCustomId("vouch").setLabel("Vouch").setEmoji("🖐️").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId("approve").setLabel("Approve").setEmoji("✅").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId("deny").setLabel("Deny").setEmoji("✖️").setStyle(ButtonStyle.Danger)
     );
 
-    /*  */
-
-    const channel = interaction.client.channels.cache.get(
-      config.whitelistChannelId
-    );
+    const channel = interaction.client.channels.cache.get(config.whitelistChannelId);
 
     if (!channel) {
-      return interaction.reply({
-        content: "❌ Whitelist channel not found.",
-        flags: 64
-      });
+      return interaction.editReply("❌ Whitelist channel not found.");
     }
 
     await channel.send({
       embeds: [embed],
       components: [buttons]
     });
-  
 
-    return interaction.reply({
-      content: "✅ Your application has been submitted!",
-      flags: 64
-    });
+    return interaction.editReply("✅ Your application has been submitted!");
   }
 
-  /* DENIED MODAL CONFIGURATION */
+  /* =========================
+     DENY MODAL (UNCHANGED)
+  ========================= */
 
   if (interaction.customId.startsWith("deny_reason_modal:")) {
 
@@ -213,7 +164,6 @@ fs.writeFileSync(DB, JSON.stringify(database, null, 2));
 
     const message = await channel.messages.fetch(messageId).catch(() => null);
 
-
     if (!message || !message.embeds.length) {
       return interaction.reply({
         content: "❌ Application message not found.",
@@ -224,36 +174,23 @@ fs.writeFileSync(DB, JSON.stringify(database, null, 2));
     const embed = EmbedBuilder.from(message.embeds[0]);
     const fields = embed.data.fields;
 
-    /* STATUS FIELD CHECK */
-
     const statusField = fields.find(field =>
       field.value?.includes("PENDING REVIEW")
     );
 
-    // Deny if not pending
-    if (!statusField || !statusField.value.includes("PENDING REVIEW")) {
+    if (!statusField) {
       return interaction.reply({
         content: "❌ This application can no longer be denied.",
         flags: 64
       });
     }
 
-    /* UPDATE STATUS FIELD FOR DENY */
-
     statusField.value = "❌ **DENIED**";
 
-    if (!fields.some(f => f.name.includes("DENIED BY"))) {
-      embed.addFields(
-        {
-          name: "❌ **DENIED BY**",
-          value: `${interaction.user}`
-        },
-        {
-          name: "📄 **DENIAL REASON**",
-          value: reason
-        }
-      );
-    }
+    embed.addFields(
+      { name: "❌ **DENIED BY**", value: `${interaction.user}` },
+      { name: "📄 **DENIAL REASON**", value: reason }
+    );
 
     await message.edit({
       embeds: [embed],
