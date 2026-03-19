@@ -8,6 +8,7 @@ const {
 
 const config = require("../config.json");
 const pool = require("../database");
+const sync = require("../syncWhitelist");
 
 /* ADMIN CHECK */
 const isAdmin = async (interaction) => {
@@ -164,6 +165,7 @@ module.exports = async (interaction) => {
     vouchField.value = vouches.join(", ");
 
     await message.edit({ embeds: [embed] });
+    await sync(message);
 
     try {
       await pool.query(
@@ -215,6 +217,7 @@ module.exports = async (interaction) => {
       embeds: [embed],
       components: []
     });
+    await sync(message);
 
     const member = await interaction.guild.members.fetch(userId);
 
