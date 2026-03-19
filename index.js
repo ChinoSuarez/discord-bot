@@ -105,13 +105,14 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // BUTTONS
-      else if (interaction.isButton()) {
-        for (const handler of buttonHandlers) {
-          await handler(interaction);
+    else if (interaction.isButton()) {
 
-          if (interaction.replied || interaction.deferred) break;
-        }
+      for (const handler of buttonHandlers) {
+        await handler(interaction);
+
+        if (interaction.replied || interaction.deferred) break;
       }
+    }
 
     // MODALS
       else if (interaction.isModalSubmit()) {

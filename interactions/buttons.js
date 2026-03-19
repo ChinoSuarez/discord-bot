@@ -10,6 +10,21 @@ const config = require("../config.json");
 const pool = require("../database");
 const sync = require("../syncWhitelist");
 
+/* =========================
+   SAFE REPLY (FIX)
+========================= */
+const safeReply = async (interaction, content) => {
+  try {
+    if (interaction.replied || interaction.deferred) {
+      return await interaction.editReply({ content });
+    } else {
+      return await interaction.reply({ content, flags: 64 });
+    }
+  } catch (err) {
+    console.error("Reply failed:", err);
+  }
+};
+
 /* ADMIN CHECK */
 const isAdmin = async (interaction) => {
   if (interaction.guild.ownerId === interaction.user.id) return true;
@@ -49,10 +64,7 @@ module.exports = async (interaction) => {
   if (interaction.customId === "open_whitelist_modal") {
 
     if (interaction.member.roles.cache.has(config.citizenRoleId)) {
-      return interaction.reply({
-        content: "❌ You are already a **CITIZEN**.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ You are already a **CITIZEN**.");
     }
 
     const modal = new ModalBuilder()
@@ -97,41 +109,29 @@ module.exports = async (interaction) => {
   );
 
   /* =========================
-     VOUCH SYSTEM (FIXED)
+     VOUCH SYSTEM
   ========================= */
   if (interaction.customId === "vouch") {
 
     if (!interaction.member.roles.cache.has(config.citizenRoleId)) {
-      return interaction.reply({
-        content: "❌ Only **Citizens** can vouch.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ Only **Citizens** can vouch.");
     }
 
     if (!statusField) {
-      return interaction.reply({
-        content: "❌ Application is not pending.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ Application is not pending.");
     }
 
     const userField = fields.find(f => f.value?.includes("<@"));
     const match = userField?.value.match(/<@(\d+)>/);
 
     if (!match) {
-      return interaction.reply({
-        content: "❌ Failed to get applicant.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ Failed to get applicant.");
     }
 
     const applicantId = match[1];
 
     if (interaction.user.id === applicantId) {
-      return interaction.reply({
-        content: "❌ You cannot vouch yourself.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ You cannot vouch yourself.");
     }
 
     const vouchField = fields.find(f =>
@@ -139,10 +139,7 @@ module.exports = async (interaction) => {
     );
 
     if (!vouchField) {
-      return interaction.reply({
-        content: "❌ Vouch field missing.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ Vouch field missing.");
     }
 
     let vouches = vouchField.value === "None"
@@ -151,17 +148,11 @@ module.exports = async (interaction) => {
 
     const voucher = `<@${interaction.user.id}>`;
 
-    // ❌ prevent duplicate (NO TOGGLE)
     if (vouches.includes(voucher)) {
-      return interaction.reply({
-        content: "❌ You already vouched.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ You already vouched.");
     }
 
-    // add vouch
     vouches.push(voucher);
-
     vouchField.value = vouches.join(", ");
 
     await message.edit({ embeds: [embed] });
@@ -176,10 +167,7 @@ module.exports = async (interaction) => {
       console.error("DB ERROR:", err);
     }
 
-    return interaction.reply({
-      content: "✅ Vouch added.",
-      flags: 64
-    });
+    return safeReply(interaction, "✅ Vouch added.");
   }
 
   /* =========================
@@ -188,17 +176,11 @@ module.exports = async (interaction) => {
   if (interaction.customId === "approve") {
 
     if (!(await isAdmin(interaction))) {
-      return interaction.reply({
-        content: "❌ No permission.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ No permission.");
     }
 
     if (!statusField || !statusField.value.includes("PENDING")) {
-      return interaction.reply({
-        content: "❌ Already handled.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ Already handled.");
     }
 
     const userField = fields.find(f => f.value?.includes("<@"));
@@ -227,10 +209,7 @@ module.exports = async (interaction) => {
       await member.setNickname(characterName);
     } catch {}
 
-    return interaction.reply({
-      content: "✅ Approved.",
-      flags: 64
-    });
+    return safeReply(interaction, "✅ Approved.");
   }
 
   /* =========================
@@ -239,10 +218,7 @@ module.exports = async (interaction) => {
   if (interaction.customId === "deny") {
 
     if (!(await isAdmin(interaction))) {
-      return interaction.reply({
-        content: "❌ No permission.",
-        flags: 64
-      });
+      return safeReply(interaction, "❌ No permission.");
     }
 
     const modal = new ModalBuilder()
