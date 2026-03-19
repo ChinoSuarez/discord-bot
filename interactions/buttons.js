@@ -8,7 +8,6 @@ const {
 
 const config = require("../config.json");
 const pool = require("../database");
-const sync = require("../syncWhitelist");
 
 /* =========================
    SAFE REPLY (FIX)
@@ -109,7 +108,7 @@ module.exports = async (interaction) => {
   );
 
   /* =========================
-     VOUCH SYSTEM
+    VOUCH SYSTEM
   ========================= */
   if (interaction.customId === "vouch") {
 
@@ -148,15 +147,30 @@ module.exports = async (interaction) => {
 
     const voucher = `<@${interaction.user.id}>`;
 
+    // 🔁 TOGGLE SYSTEM
     if (vouches.includes(voucher)) {
-      return safeReply(interaction, "❌ You already vouched.");
+      vouches = vouches.filter(v => v !== voucher);
+      vouchField.value = vouches.length ? vouches.join(", ") : "None";
+
+      await message.edit({ embeds: [embed] });
+
+      try {
+        await pool.query(
+          "UPDATE whitelist SET vouchers = $1 WHERE discord_id = $2",
+          [vouchField.value, applicantId]
+        );
+      } catch (err) {
+        console.error("DB ERROR:", err);
+      }
+
+      return safeReply(interaction, "❌ Vouch removed.");
     }
 
+    // ✅ ADD VOUCH
     vouches.push(voucher);
     vouchField.value = vouches.join(", ");
 
     await message.edit({ embeds: [embed] });
-    await sync(message);
 
     try {
       await pool.query(
@@ -199,7 +213,6 @@ module.exports = async (interaction) => {
       embeds: [embed],
       components: []
     });
-    await sync(message);
 
     const member = await interaction.guild.members.fetch(userId);
 
