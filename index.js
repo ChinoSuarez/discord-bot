@@ -101,7 +101,7 @@ client.on(Events.InteractionCreate, async interaction => {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
 
-      await command.execute(interaction);
+      await Promise.resolve(command.execute(interaction));
     }
 
     // BUTTONS
@@ -123,23 +123,24 @@ client.on(Events.InteractionCreate, async interaction => {
         }
       }
 
-  } catch (error) {
-    console.error("❌ Interaction error:", error);
+    } catch (error) {
+      console.error("❌ Interaction error:", error);
 
-    try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({
-          content: "❌ An unexpected error occurred."
-        });
-      } else {
-        await interaction.reply({
-          content: "❌ An unexpected error occurred."
-        });
+      try {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: "❌ An unexpected error occurred."
+          }).catch(() => {});
+        } else {
+          await interaction.reply({
+            content: "❌ An unexpected error occurred.",
+            flags: 64
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error("❌ Failed to send error response:", err);
       }
-    } catch (err) {
-      console.error("❌ Failed to send error response:", err);
     }
-  }
 });
 
 /* ===============================
