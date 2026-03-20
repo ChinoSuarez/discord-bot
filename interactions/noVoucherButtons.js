@@ -17,7 +17,7 @@ const safeReply = async (interaction, content) => {
     if (interaction.replied || interaction.deferred) {
       return await interaction.editReply({ content });
     } else {
-      return await interaction.reply({ content, flags: 64 });
+      return await interaction.reply({ content, ephemeral: true });
     }
   } catch (err) {
     console.error("Reply failed:", err);
@@ -47,7 +47,7 @@ module.exports = async (interaction) => {
       if (interaction.member.roles.cache.has(config.citizenRoleId)) {
         return interaction.reply({
           content: "❌ You are already a **CITIZEN**.",
-          flags: 64
+          ephemeral: true
         });
       }
 
@@ -61,7 +61,7 @@ module.exports = async (interaction) => {
         const remaining = Math.ceil((COOLDOWN_TIME - (now - lastUsed)) / 1000);
         return interaction.reply({
           content: `⏳ Wait ${remaining}s before applying again.`,
-          flags: 64
+          ephemeral: true
         });
       }
 
@@ -194,7 +194,7 @@ module.exports = async (interaction) => {
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({
         content: "❌ Something went wrong.",
-        flags: 64
+        ephemeral: true
       }).catch(() => {});
     }
   }

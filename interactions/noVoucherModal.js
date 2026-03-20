@@ -13,7 +13,7 @@ module.exports = async (interaction) => {
     if (interaction.customId !== "no_voucher_modal") return;
 
     // ✅ prevent timeout
-    await interaction.deferReply({ flags: 64 });
+    await interaction.deferReply({ ephemeral: true });
 
     const name = interaction.fields.getTextInputValue("character_name").trim();
     const steam = interaction.fields.getTextInputValue("steam_link").trim();

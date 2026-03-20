@@ -50,7 +50,7 @@ module.exports = {
 
     await interaction.reply({
       content: "✅ No Voucher panel sent.",
-      flags: 64
+      ephemeral: true
     });
   }
 };
