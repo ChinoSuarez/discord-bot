@@ -43,14 +43,14 @@ module.exports = {
         .setStyle(ButtonStyle.Primary)
     );
 
-    await interaction.channel.send({
-      embeds: [embed],
-      components: [row]
-    });
-
     await interaction.reply({
       content: "✅ No Voucher panel sent.",
       ephemeral: true
+    });
+
+    await interaction.channel.send({
+      embeds: [embed],
+      components: [row]
     });
   }
 };
