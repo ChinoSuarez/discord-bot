@@ -35,16 +35,17 @@ process.on("uncaughtException", console.error);
 
 /* ===============================
    LOAD BUTTON & MODAL HANDLERS
-   (FLAT STRUCTURE)
    =============================== */
 
 const buttonHandlers = [
   require("./interactions/buttons"),
+  require("./interactions/noVoucherButtons"),
   require("./interactions/nameChangeButtons")
 ];
 
 const modalHandlers = [
   require("./interactions/modals"),
+  require("./interactions/noVoucherModal"),
   require("./interactions/nameChangeModals")
 ];
 
@@ -72,22 +73,24 @@ for (const file of commandFiles) {
    READY
    =============================== */
 
-    client.once(Events.ClientReady, async () => {
-      console.log(`✅ Logged in as ${client.user.tag}`);
+client.once(Events.ClientReady, async () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
 
-      const restartChannel = "1470750976368578630"; // channel where restart messages go
+  const restartChannel = "1470750976368578630";
 
-      try {
-        const channel = await client.channels.fetch(restartChannel);
+  try {
+    const channel = await client.channels.fetch(restartChannel);
 
-        await channel.send({
-          content: "✅ **Gatekeeper is now back online.**"
-        });
+    if (channel) {
+      await channel.send({
+        content: "✅ **Gatekeeper is now back online.**"
+      });
+    }
 
-      } catch (err) {
-        console.error("Failed to send restart confirmation:", err);
-      }
-    });
+  } catch (err) {
+    console.error("Failed to send restart confirmation:", err);
+  }
+});
 
 /* ===============================
    INTERACTION HANDLER
@@ -115,32 +118,33 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     // MODALS
-      else if (interaction.isModalSubmit()) {
-        for (const handler of modalHandlers) {
-          await handler(interaction);
+    else if (interaction.isModalSubmit()) {
 
-          if (interaction.replied || interaction.deferred) break;
-        }
-      }
+      for (const handler of modalHandlers) {
+        await handler(interaction);
 
-    } catch (error) {
-      console.error("❌ Interaction error:", error);
-
-      try {
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply({
-            content: "❌ An unexpected error occurred."
-          }).catch(() => {});
-        } else {
-          await interaction.reply({
-            content: "❌ An unexpected error occurred.",
-            flags: 64
-          }).catch(() => {});
-        }
-      } catch (err) {
-        console.error("❌ Failed to send error response:", err);
+        if (interaction.replied || interaction.deferred) break;
       }
     }
+
+  } catch (error) {
+    console.error("❌ Interaction error:", error);
+
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({
+          content: "❌ An unexpected error occurred."
+        }).catch(() => {});
+      } else {
+        await interaction.reply({
+          content: "❌ An unexpected error occurred.",
+          ephemeral: true // ✅ FIXED
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("❌ Failed to send error response:", err);
+    }
+  }
 });
 
 /* ===============================
