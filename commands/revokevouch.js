@@ -1,4 +1,10 @@
-const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder
+} = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -14,7 +20,13 @@ module.exports = {
 
     const target = interaction.options.getUser("user");
 
-    // ❌ prevent self revoke nonsense
+    if (!target) {
+      return interaction.reply({
+        content: "❌ Invalid user.",
+        flags: 64
+      });
+    }
+
     if (target.id === interaction.user.id) {
       return interaction.reply({
         content: "❌ You cannot revoke yourself.",
@@ -22,7 +34,6 @@ module.exports = {
       });
     }
 
-    // 📦 CREATE MODAL
     const modal = new ModalBuilder()
       .setCustomId(`revoke_modal:${target.id}`)
       .setTitle("Revoke Vouch");
