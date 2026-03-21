@@ -6,6 +6,8 @@ const {
   ButtonStyle
 } = require("discord.js");
 
+const safeReply = require("../utils/safeReply");
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("whitelist-panel")
@@ -15,10 +17,7 @@ module.exports = {
 
     // OPTIONAL: Admin only
     if (!interaction.member.permissions.has("Administrator")) {
-      return interaction.reply({
-        content: "❌ You do not have permission to use this.",
-        flags: 64
-      });
+    return safeReply(interaction, "❌ You do not have permission to use this.");
     }
 
         const embed = new EmbedBuilder()

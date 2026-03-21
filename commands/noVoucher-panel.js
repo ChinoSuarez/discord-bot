@@ -45,7 +45,7 @@ module.exports = {
 
     await interaction.reply({
       content: "✅ No Voucher panel sent.",
-      ephemeral: true
+      flags: 64
     });
 
     await interaction.channel.send({
