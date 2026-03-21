@@ -46,7 +46,8 @@ const buttonHandlers = [
 const modalHandlers = [
   require("./interactions/modals"),
   require("./interactions/noVoucherModal"),
-  require("./interactions/nameChangeModals")
+  require("./interactions/nameChangeModals"),
+  require("./interactions/revokeModal")
 ];
 
 /* ===============================
