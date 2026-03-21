@@ -15,11 +15,6 @@ const COOLDOWN_TIME = 1 * 60 * 1000;
 module.exports = async (interaction) => {
   if (!interaction.isModalSubmit()) return;
 
-  if (
-    !interaction.customId.startsWith("deny_reason_modal") &&
-    interaction.customId !== "whitelist_submit"
-  ) return;
-
   /* =========================
      WHITELIST SUBMIT
   ========================= */

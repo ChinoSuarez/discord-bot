@@ -7,7 +7,6 @@ const {
 } = require("discord.js");
 
 const config = require("../config.json"); // ✅ ADD THIS
-const safeReply = require("../utils/safeReply");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -24,7 +23,10 @@ module.exports = {
       );
 
     if (!isAdmin) {
-    return safeReply(interaction, "❌ You do not have permission to use this.");
+      return interaction.reply({
+        content: "❌ You do not have permission to use this.",
+        flags: 64
+      });
     }
 
     const embed = new EmbedBuilder()
@@ -65,7 +67,10 @@ module.exports = {
       } catch (err) {
         console.error("❌ Failed to send panel:", err);
 
-      return safeReply(interaction, "❌ Bot cannot send messages in this channel. Please check permissions.");
+        return interaction.reply({
+          content: "❌ Bot cannot send messages in this channel. Please check permissions.",
+          flags: 64
+        });
       }
 
     return interaction.reply({

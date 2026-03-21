@@ -7,19 +7,22 @@ const {
 } = require("discord.js");
 
 const config = require("../config.json");
-const safeReply = require("../utils/safeReply");
-const validIds = [
-  "no_voucher_apply",
-  "no_voucher_interviewed",
-  "no_voucher_deny"
-];
-
-if (!validIds.includes(interaction.customId)) return;
 
 const cooldowns = new Map();
 const COOLDOWN_TIME = 60 * 1000; // 1 minute
 
 /* SAFE REPLY */
+const safeReply = async (interaction, content) => {
+  try {
+    if (interaction.replied || interaction.deferred) {
+      return await interaction.editReply({ content });
+    } else {
+      return await interaction.reply({ content, flags: 64 });
+    }
+  } catch (err) {
+    console.error("Reply failed:", err);
+  }
+};
 
 /* ADMIN CHECK */
 const isAdmin = async (interaction) => {
@@ -102,11 +105,7 @@ module.exports = async (interaction) => {
       return safeReply(interaction, "❌ Invalid application embed.");
     }
 
-
-    if (!statusField || !statusField.value) {
-      const statusField = fields.find(f => f.name === "STATUS");
-      return safeReply(interaction, "❌ Invalid application state.");
-    }
+    const statusField = fields.find(f => f.name === "STATUS");
 
     if (!statusField) {
       return safeReply(interaction, "❌ Status not found.");
@@ -115,7 +114,6 @@ module.exports = async (interaction) => {
     /* =========================
        INTERVIEWED (FINAL ACTION)
     ========================= */
-
     if (interaction.customId === "no_voucher_interviewed") {
 
       if (!(await isAdmin(interaction))) {
@@ -197,6 +195,11 @@ module.exports = async (interaction) => {
   } catch (err) {
     console.error("NoVoucher Button Error:", err);
 
-    return safeReply(interaction, "❌ Something went wrong.");
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({
+        content: "❌ Something went wrong.",
+        flags: 64
+      }).catch(() => {});
+    }
   }
 };

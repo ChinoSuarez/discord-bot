@@ -7,14 +7,6 @@ const {
 } = require("discord.js");
 
 const config = require("../config.json");
-const safeReply = require("../utils/safeReply");
-const validIds = [
-  "open_namechange_modal",
-  "namechange_approve",
-  "namechange_deny"
-];
-
-if (!validIds.includes(interaction.customId)) return;
 
 /* ADMIN CHECK */
 const isAdmin = async (interaction) => {
@@ -64,7 +56,7 @@ module.exports = async (interaction) => {
   if (interaction.customId === "namechange_approve") {
 
     if (!(await isAdmin(interaction))) {
-    return safeReply(interaction, "❌ No permission.");
+      return interaction.reply({ content: "❌ No permission.", flags: 64 });
     }
 
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
@@ -76,7 +68,10 @@ module.exports = async (interaction) => {
       : null;
 
     if (!userId) {
-    return safeReply(interaction, "❌ User data missing. Cannot change name.");
+      return interaction.reply({
+        content: "❌ User data missing. Cannot change name.",
+        flags: 64
+      });
     }
 
     /* GET REQUESTED NAME */
@@ -85,20 +80,29 @@ module.exports = async (interaction) => {
     )?.value;
 
     if (!newName) {
-    return safeReply(interaction, "❌ Requested name not found.");
+      return interaction.reply({
+        content: "❌ Requested name not found.",
+        flags: 64
+      });
     }
 
     const member = await interaction.guild.members.fetch(userId).catch(() => null);
 
     if (!member) {
-      return safeReply(interaction, "❌ User not found in server.");
+      return interaction.reply({
+        content: "❌ User not found in server.",
+        flags: 64
+      });
     }
 
     /* SET NICKNAME */
     try {
       await member.setNickname(newName.slice(0, 32));
     } catch {
-      return safeReply(interaction, "⚠️ Approved, but bot cannot change nickname (permissions).");
+      return interaction.reply({
+        content: "⚠️ Approved, but bot cannot change nickname (permissions).",
+        flags: 64
+      });
     }
 
     /* UPDATE EMBED STATUS */
@@ -110,7 +114,10 @@ module.exports = async (interaction) => {
       components: []
     });
 
-    return safeReply(interaction, `✅ Name changed to **${newName}**`);
+    return interaction.reply({
+      content: `✅ Name changed to **${newName}**`,
+      flags: 64
+    });
   }
 
   /* =====================
@@ -119,9 +126,8 @@ module.exports = async (interaction) => {
   if (interaction.customId === "namechange_deny") {
 
     if (!(await isAdmin(interaction))) {
-    return safeReply(interaction, "❌ No permission.");
+      return interaction.reply({ content: "❌ No permission.", flags: 64 });
     }
-
 
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
     embed.data.fields[embed.data.fields.length - 1].value = "❌ **DENIED**";
@@ -132,6 +138,9 @@ module.exports = async (interaction) => {
       components: []
     });
 
-    return safeReply(interaction, "❌ Name change denied.");
+    return interaction.reply({
+      content: "❌ Name change denied.",
+      flags: 64
+    });
   }
 };

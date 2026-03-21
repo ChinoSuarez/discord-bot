@@ -110,38 +110,20 @@ client.on(Events.InteractionCreate, async interaction => {
     // BUTTONS
     else if (interaction.isButton()) {
 
-      try {
-        // ✅ Always defer immediately
-        if (!interaction.deferred && !interaction.replied) {
-          await interaction.deferReply({ flags: 64 });
-        }
+      for (const handler of buttonHandlers) {
+        await handler(interaction);
 
-        for (const handler of buttonHandlers) {
-          await handler(interaction);
-          if (interaction.replied) break;
-        }
-
-      } catch (err) {
-        console.error("Button handler error:", err);
+        if (interaction.replied || interaction.deferred) break;
       }
     }
-
 
     // MODALS
     else if (interaction.isModalSubmit()) {
 
-      try {
-        if (!interaction.deferred && !interaction.replied) {
-          await interaction.deferReply({ flags: 64 });
-        }
+      for (const handler of modalHandlers) {
+        await handler(interaction);
 
-        for (const handler of modalHandlers) {
-          await handler(interaction);
-          if (interaction.replied) break;
-        }
-
-      } catch (err) {
-        console.error("Modal handler error:", err);
+        if (interaction.replied || interaction.deferred) break;
       }
     }
 

@@ -8,7 +8,21 @@ const {
 
 const config = require("../config.json");
 const pool = require("../database");
-const safeReply = require("../utils/safeReply");
+
+/* =========================
+   SAFE REPLY (FIX)
+========================= */
+const safeReply = async (interaction, content) => {
+  try {
+    if (interaction.replied || interaction.deferred) {
+      return await interaction.editReply({ content });
+    } else {
+      return await interaction.reply({ content, flags: 64 });
+    }
+  } catch (err) {
+    console.error("Reply failed:", err);
+  }
+};
 
 /* ADMIN CHECK */
 const isAdmin = async (interaction) => {
@@ -48,12 +62,9 @@ module.exports = async (interaction) => {
   /* OPEN MODAL */
   if (interaction.customId === "open_whitelist_modal") {
 
-  if (interaction.member.roles.cache.has(config.citizenRoleId)) {
-    return interaction.reply({
-      content: "❌ You are already a **CITIZEN**.",
-      flags: 64
-    });
-  }
+    if (interaction.member.roles.cache.has(config.citizenRoleId)) {
+      return safeReply(interaction, "❌ You are already a **CITIZEN**.");
+    }
 
     const modal = new ModalBuilder()
       .setCustomId("whitelist_submit")
@@ -203,11 +214,7 @@ module.exports = async (interaction) => {
       components: []
     });
 
-    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-
-    if (!member) {
-      return safeReply(interaction, "❌ User not found.");
-    }
+    const member = await interaction.guild.members.fetch(userId);
 
     await member.roles.add(config.citizenRoleId).catch(() => {});
 
