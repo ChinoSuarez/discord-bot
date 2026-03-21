@@ -99,7 +99,11 @@ module.exports = async (interaction) => {
     if (!message.embeds.length) return;
 
     const embed = EmbedBuilder.from(message.embeds[0]);
-    const fields = embed.data.fields;
+    const fields = embed.data.fields || [];
+
+    if (!fields.length) {
+      return safeReply(interaction, "❌ Invalid application embed.");
+    }
 
     const statusField = fields.find(f => f.name === "STATUS");
 
