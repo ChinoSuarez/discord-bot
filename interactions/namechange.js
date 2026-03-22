@@ -58,15 +58,27 @@ module.exports = async (interaction) => {
       const embed = EmbedBuilder.from(embedRaw);
 
       // ✅ IDENTITY CHECK
-      const footer = embed.data.footer?.text;
-      if (!footer?.startsWith("app:namechange|UID:")) {
-        return interaction.reply({
-          content: "❌ Invalid application embed.",
-          flags: 64
-        });
-      }
+        const footer = embed.data.footer?.text;
 
-      const userId = footer.split("UID:")[1];
+        // ✅ SUPPORT OLD + NEW
+        if (
+        !footer?.startsWith("app:namechange|UID:") &&
+        !footer?.startsWith("UID:")
+        ) {
+        return interaction.reply({
+            content: "❌ Invalid application embed.",
+            flags: 64
+        });
+        }
+
+        // ✅ GET USER ID (both formats)
+        let userId;
+
+        if (footer.startsWith("app:namechange|UID:")) {
+        userId = footer.split("UID:")[1];
+        } else if (footer.startsWith("UID:")) {
+        userId = footer.replace("UID:", "");
+        }
 
       const member = await interaction.guild.members.fetch(userId).catch(() => null);
       if (!member) {
@@ -149,45 +161,65 @@ module.exports = async (interaction) => {
   /* =========================
      MODAL SUBMIT
      ========================= */
-  if (interaction.isModalSubmit()) {
+        if (interaction.isModalSubmit()) {
 
-    if (interaction.customId !== "namechange_submit") return;
+        if (interaction.customId !== "namechange_submit") return;
 
-    const newName = interaction.fields.getTextInputValue("new_name");
-    const currentName = interaction.member.nickname || interaction.user.username;
+        // ✅ FIX: define variables
+        const newName = interaction.fields.getTextInputValue("new_name");
+        const currentName = interaction.member.nickname || interaction.user.username;
 
-    const embed = new EmbedBuilder()
-      .setColor(0x3498db)
-      .setAuthor({ name: "NAME CHANGE REQUEST" })
-      .addFields(
-        { name: "CURRENT NAME", value: currentName },
-        { name: "REQUESTED NAME", value: newName },
-        { name: "STATUS", value: "🟡 PENDING" }
-      )
-      .setFooter({ text: `app:namechange|UID:${interaction.user.id}` });
+        const embed = new EmbedBuilder()
+            .setColor(0x2f3136)
+            .setAuthor({
+            name: "NAME CHANGE REQUEST",
+            iconURL: interaction.guild.iconURL({ dynamic: true })
+            })
+            .setThumbnail(
+            interaction.user.displayAvatarURL({ dynamic: true, size: 256 })
+            )
+            .addFields(
+            {
+                name: "CURRENT NAME",
+                value: currentName,
+            },
+            {
+                name: "REQUESTED NAME",
+                value: newName,
+            },
+            {
+                name: "\u200B",
+                value: "🟡 PENDING REVIEW"
+            }
+            )
+            // ✅ FIX: keep identity system
+            .setFooter({
+            text: `app:namechange|UID:${interaction.user.id}`
+            })
+            .setTimestamp();
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("namechange_approve")
-        .setLabel("Approve")
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId("namechange_deny")
-        .setLabel("Deny")
-        .setStyle(ButtonStyle.Danger)
-    );
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+            .setCustomId("namechange_approve")
+            .setLabel("✅ APPROVED")
+            .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+            .setCustomId("namechange_deny")
+            .setLabel("❌ DENIED")
+            .setStyle(ButtonStyle.Danger)
+        );
 
-    await interaction.reply({
-      content: "✅ Submitted.",
-      flags: 64
-    });
+        await interaction.reply({
+            content: "✅ Name Change Submitted.",
+            flags: 64
+        });
 
-    const channel = await interaction.client.channels.fetch(config.nameChangeChannelId).catch(() => null);
-    if (!channel) return;
+        const channel = await interaction.client.channels.fetch(config.nameChangeChannelId).catch(() => null);
+        if (!channel) return;
 
-    await channel.send({
-      embeds: [embed],
-      components: [row]
-    });
-  }
+        await channel.send({
+            embeds: [embed],
+            components: [row]
+        });
+        }
 };
