@@ -57,28 +57,16 @@ module.exports = async (interaction) => {
 
       const embed = EmbedBuilder.from(embedRaw);
 
-      // ✅ IDENTITY CHECK
-        const footer = embed.data.footer?.text;
-
-        // ✅ SUPPORT OLD + NEW
-        if (
-        !footer?.startsWith("app:namechange|UID:") &&
-        !footer?.startsWith("UID:")
-        ) {
+      // ✅ UID CHECK
+      const footer = embed.data.footer?.text;
+      if (!footer?.startsWith("UID:")) {
         return interaction.reply({
-            content: "❌ Invalid application embed.",
-            flags: 64
+          content: "❌ Invalid application embed.",
+          flags: 64
         });
-        }
+      }
 
-        // ✅ GET USER ID (both formats)
-        let userId;
-
-        if (footer.startsWith("app:namechange|UID:")) {
-        userId = footer.split("UID:")[1];
-        } else if (footer.startsWith("UID:")) {
-        userId = footer.replace("UID:", "");
-        }
+      const userId = footer.replace("UID:", "");
 
       const member = await interaction.guild.members.fetch(userId).catch(() => null);
       if (!member) {
@@ -86,27 +74,30 @@ module.exports = async (interaction) => {
       }
 
       const newName = embed.data.fields[1]?.value;
-
       if (!newName) {
         return interaction.reply({
-            content: "❌ Requested name missing.",
-            flags: 64
+          content: "❌ Requested name missing.",
+          flags: 64
         });
-        }
+      }
 
+      const fields = embed.data.fields;
+
+      /* APPROVE */
       if (interaction.customId === "namechange_approve") {
 
         try {
-            const safeName = newName.trim().slice(0, 32);
+          const safeName = newName.trim().slice(0, 32);
 
-            if (safeName.length < 3) {
+          if (safeName.length < 3) {
             return interaction.reply({
-                content: "❌ Invalid name.",
-                flags: 64
+              content: "❌ Invalid name.",
+              flags: 64
             });
-            }
+          }
 
-            await member.setNickname(safeName);
+          await member.setNickname(safeName);
+
         } catch {
           return interaction.reply({
             content: "⚠️ Approved but cannot change nickname.",
@@ -114,7 +105,6 @@ module.exports = async (interaction) => {
           });
         }
 
-        const fields = embed.data.fields;
         fields[2].value = "✅ APPROVED";
         embed.setFields(fields);
 
@@ -128,15 +118,24 @@ module.exports = async (interaction) => {
           components: []
         });
 
-            return interaction.reply({
-            content: `✅ Name changed to ${safeName}`,
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({
+            content: `✅ Name changed to ${newName}`,
             flags: 64
-            });
+          });
+        } else {
+          await interaction.reply({
+            content: `✅ Name changed to ${newName}`,
+            flags: 64
+          });
+        }
+
+        return;
       }
 
+      /* DENY */
       if (interaction.customId === "namechange_deny") {
 
-        const fields = embed.data.fields;
         fields[2].value = "❌ DENIED";
         embed.setFields(fields);
 
@@ -150,76 +149,87 @@ module.exports = async (interaction) => {
           components: []
         });
 
-        return interaction.reply({
-          content: "❌ Request denied.",
-          flags: 64
-        });
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({
+            content: "❌ Request denied.",
+            flags: 64
+          });
+        } else {
+          await interaction.reply({
+            content: "❌ Request denied.",
+            flags: 64
+          });
+        }
+
+        return;
       }
     }
+
+    return;
   }
 
   /* =========================
      MODAL SUBMIT
      ========================= */
-        if (interaction.isModalSubmit()) {
+  if (interaction.isModalSubmit()) {
 
-        if (interaction.customId !== "namechange_submit") return;
+    if (interaction.customId !== "namechange_submit") return;
 
-        // ✅ FIX: define variables
-        const newName = interaction.fields.getTextInputValue("new_name");
-        const currentName = interaction.member.nickname || interaction.user.username;
+    const newName = interaction.fields.getTextInputValue("new_name");
+    const currentName = interaction.member.nickname || interaction.user.username;
 
-        const embed = new EmbedBuilder()
-            .setColor(0x2f3136)
-            .setAuthor({
-            name: "NAME CHANGE REQUEST",
-            iconURL: interaction.guild.iconURL({ dynamic: true })
-            })
-            .setThumbnail(
-            interaction.user.displayAvatarURL({ dynamic: true, size: 256 })
-            )
-            .addFields(
-            {
-                name: "CURRENT NAME",
-                value: currentName,
-            },
-            {
-                name: "REQUESTED NAME",
-                value: newName,
-            },
-            {
-                name: "\u200B",
-                value: "🟡 PENDING REVIEW"
-            }
-            )
-            // ✅ FIX: keep identity system
-            .setFooter({
-            text: `app:namechange|UID:${interaction.user.id}`
-            })
-            .setTimestamp();
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-            .setCustomId("namechange_approve")
-            .setLabel("✅ APPROVED")
-            .setStyle(ButtonStyle.Success),
-            new ButtonBuilder()
-            .setCustomId("namechange_deny")
-            .setLabel("❌ DENIED")
-            .setStyle(ButtonStyle.Danger)
-        );
-
-        await interaction.reply({
-            content: "✅ Name Change Submitted.",
-            flags: 64
-        });
-
-        const channel = await interaction.client.channels.fetch(config.nameChangeChannelId).catch(() => null);
-        if (!channel) return;
-
-        await channel.send({
-            embeds: [embed],
-            components: [row]
-        });
+    const embed = new EmbedBuilder()
+      .setColor(0x2f3136)
+      .setAuthor({
+        name: "NAME CHANGE REQUEST",
+        iconURL: interaction.guild.iconURL({ dynamic: true })
+      })
+      .setThumbnail(
+        interaction.user.displayAvatarURL({ dynamic: true, size: 256 })
+      )
+      .addFields(
+        {
+          name: "CURRENT NAME",
+          value: currentName,
+        },
+        {
+          name: "REQUESTED NAME",
+          value: newName,
+        },
+        {
+          name: "\u200B",
+          value: "🟡 PENDING REVIEW"
         }
+      )
+      .setFooter({
+        text: `UID:${interaction.user.id}`
+      })
+      .setTimestamp();
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("namechange_approve")
+        .setLabel("✅ APPROVED")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("namechange_deny")
+        .setLabel("❌ DENIED")
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    await interaction.reply({
+      content: "✅ Name Change Submitted.",
+      flags: 64
+    });
+
+    const channel = await interaction.client.channels.fetch(config.nameChangeChannelId).catch(() => null);
+    if (!channel) return;
+
+    await channel.send({
+      embeds: [embed],
+      components: [row]
+    });
+
+    return;
+  }
 };

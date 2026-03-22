@@ -97,64 +97,56 @@ client.once(Events.ClientReady, async () => {
    INTERACTION HANDLER
    =============================== */
 
-client.on(Events.InteractionCreate, async interaction => {
-  try {
+    client.on(Events.InteractionCreate, async interaction => {
+      try {
 
-    // SLASH COMMANDS
-    if (interaction.isChatInputCommand()) {
-      const command = client.commands.get(interaction.commandName);
-      if (!command) return;
+        // SLASH COMMANDS
+        if (interaction.isChatInputCommand()) {
+          const command = client.commands.get(interaction.commandName);
+          if (!command) return;
 
-      await Promise.resolve(command.execute(interaction));
-    }
+          await Promise.resolve(command.execute(interaction));
+        }
 
-    // BUTTONS
-    else if (interaction.isButton()) {
+        // BUTTONS
+        else if (interaction.isButton()) {
 
-      // ✅ NAMECHANGE FIRST
-      await namechangeHandler(interaction);
-      if (interaction.replied || interaction.deferred) return;
+          await namechangeHandler(interaction);
+          if (interaction.replied || interaction.deferred) return;
 
-      for (const handler of buttonHandlers) {
-        await handler(interaction);
+          for (const handler of buttonHandlers) {
+            await handler(interaction);
+            if (interaction.replied || interaction.deferred) break;
+          }
+        }
 
-        if (interaction.replied || interaction.deferred) break;
+        // MODALS
+        else if (interaction.isModalSubmit()) {
+
+          await namechangeHandler(interaction);
+          if (interaction.replied || interaction.deferred) return;
+
+          for (const handler of modalHandlers) {
+            await handler(interaction);
+            if (interaction.replied || interaction.deferred) break;
+          }
+        }
+
+      } catch (error) {
+        console.error("❌ Interaction error:", error);
+
+        try {
+          if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+              content: "❌ An unexpected error occurred.",
+              ephemeral: true
+            }).catch(() => {});
+          }
+        } catch (err) {
+          console.error("❌ Failed to send error response:", err);
+        }
       }
-    }
-
-    // MODALS
-    else if (interaction.isModalSubmit()) {
-
-      // ✅ NAMECHANGE FIRST
-      await namechangeHandler(interaction);
-      if (interaction.replied || interaction.deferred) return;
-
-      for (const handler of modalHandlers) {
-        await handler(interaction);
-
-        if (interaction.replied || interaction.deferred) break;
-      }
-    }
-
-  } catch (error) {
-    console.error("❌ Interaction error:", error);
-
-    try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({
-          content: "❌ An unexpected error occurred."
-        }).catch(() => {});
-      } else {
-        await interaction.reply({
-          content: "❌ An unexpected error occurred.",
-          ephemeral: true // ✅ FIXED
-        }).catch(() => {});
-      }
-    } catch (err) {
-      console.error("❌ Failed to send error response:", err);
-    }
-  }
-});
+    });
 
 /* ===============================
    LOGIN
