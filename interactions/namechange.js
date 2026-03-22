@@ -50,8 +50,10 @@ module.exports = async (interaction) => {
       interaction.customId === "namechange_deny"
     ) {
 
-      // ✅ ADMIN CHECK
-      const isAdmin = interaction.member.roles.cache.has(config.adminRoleId);
+      // ✅ FIX: MULTIPLE ADMIN ROLES
+      const isAdmin = config.adminRoleIds?.some(roleId =>
+        interaction.member.roles.cache.has(roleId)
+      );
 
       if (!isAdmin) {
         return interaction.reply({
@@ -79,7 +81,10 @@ module.exports = async (interaction) => {
 
       const member = await interaction.guild.members.fetch(userId).catch(() => null);
       if (!member) {
-        return interaction.reply({ content: "❌ User not found.", flags: 64 });
+        return interaction.reply({
+          content: "❌ User not found.",
+          flags: 64
+        });
       }
 
       const newName = embed.data.fields[1]?.value;
@@ -213,7 +218,10 @@ module.exports = async (interaction) => {
       flags: 64
     });
 
-    const channel = await interaction.client.channels.fetch(config.nameChangeChannelId).catch(() => null);
+    const channel = await interaction.client.channels
+      .fetch(config.nameChangeChannelId)
+      .catch(() => null);
+
     if (!channel) return;
 
     await channel.send({
