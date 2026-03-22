@@ -4,7 +4,9 @@ require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
+const namechangeHandler = require("./interactions/namechange");
 const messageFilter = require("./interactions/messageFilter");
+
 
 const {
   Client,
@@ -40,13 +42,11 @@ process.on("uncaughtException", console.error);
 const buttonHandlers = [
   require("./interactions/buttons"),
   require("./interactions/noVoucherButtons"),
-  require("./interactions/nameChangeButtons")
 ];
 
 const modalHandlers = [
   require("./interactions/modals"),
   require("./interactions/noVoucherModal"),
-  require("./interactions/nameChangeModals"),
   require("./interactions/revokeModal")
 ];
 
@@ -111,6 +111,10 @@ client.on(Events.InteractionCreate, async interaction => {
     // BUTTONS
     else if (interaction.isButton()) {
 
+      // ✅ NAMECHANGE FIRST
+      await namechangeHandler(interaction);
+      if (interaction.replied || interaction.deferred) return;
+
       for (const handler of buttonHandlers) {
         await handler(interaction);
 
@@ -120,6 +124,10 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // MODALS
     else if (interaction.isModalSubmit()) {
+
+      // ✅ NAMECHANGE FIRST
+      await namechangeHandler(interaction);
+      if (interaction.replied || interaction.deferred) return;
 
       for (const handler of modalHandlers) {
         await handler(interaction);
