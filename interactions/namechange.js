@@ -50,7 +50,6 @@ module.exports = async (interaction) => {
       interaction.customId === "namechange_deny"
     ) {
 
-      // ✅ FIX: MULTIPLE ADMIN ROLES
       const isAdmin = config.adminRoleIds?.some(roleId =>
         interaction.member.roles.cache.has(roleId)
       );
@@ -171,6 +170,35 @@ module.exports = async (interaction) => {
 
     if (interaction.customId !== "namechange_submit") return;
 
+    const channel = await interaction.client.channels
+      .fetch(config.nameChangeChannelId)
+      .catch(() => null);
+
+    if (!channel) return;
+
+    // ✅ BLOCK IF ALREADY HAS PENDING
+    const messages = await channel.messages.fetch({ limit: 50 });
+
+    const hasPending = messages.some(msg => {
+      const embed = msg.embeds[0];
+      if (!embed) return false;
+
+      const footer = embed.footer?.text;
+      const status = embed.fields?.[2]?.value;
+
+      return (
+        footer === `UID:${interaction.user.id}` &&
+        status === "🟡 PENDING REVIEW"
+      );
+    });
+
+    if (hasPending) {
+      return interaction.reply({
+        content: "⚠️ You already have a pending name change request.",
+        flags: 64
+      });
+    }
+
     const newName = interaction.fields.getTextInputValue("new_name");
     const currentName = interaction.member.nickname || interaction.user.username;
 
@@ -217,12 +245,6 @@ module.exports = async (interaction) => {
       content: "✅ Name Change Submitted.",
       flags: 64
     });
-
-    const channel = await interaction.client.channels
-      .fetch(config.nameChangeChannelId)
-      .catch(() => null);
-
-    if (!channel) return;
 
     await channel.send({
       embeds: [embed],
