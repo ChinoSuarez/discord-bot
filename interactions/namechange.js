@@ -50,6 +50,16 @@ module.exports = async (interaction) => {
       interaction.customId === "namechange_deny"
     ) {
 
+      // ✅ ADMIN CHECK
+      const isAdmin = interaction.member.roles.cache.has(config.adminRoleId);
+
+      if (!isAdmin) {
+        return interaction.reply({
+          content: "❌ You are not allowed to approve/deny.",
+          flags: 64
+        });
+      }
+
       const embedRaw = interaction.message.embeds[0];
       if (!embedRaw) {
         return interaction.reply({ content: "❌ Invalid embed.", flags: 64 });
@@ -57,7 +67,6 @@ module.exports = async (interaction) => {
 
       const embed = EmbedBuilder.from(embedRaw);
 
-      // ✅ UID CHECK
       const footer = embed.data.footer?.text;
       if (!footer?.startsWith("UID:")) {
         return interaction.reply({
@@ -118,19 +127,10 @@ module.exports = async (interaction) => {
           components: []
         });
 
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({
-            content: `✅ Name changed to ${newName}`,
-            flags: 64
-          });
-        } else {
-          await interaction.reply({
-            content: `✅ Name changed to ${newName}`,
-            flags: 64
-          });
-        }
-
-        return;
+        return interaction.reply({
+          content: `✅ Name changed to ${newName}`,
+          flags: 64
+        });
       }
 
       /* DENY */
@@ -149,19 +149,10 @@ module.exports = async (interaction) => {
           components: []
         });
 
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({
-            content: "❌ Request denied.",
-            flags: 64
-          });
-        } else {
-          await interaction.reply({
-            content: "❌ Request denied.",
-            flags: 64
-          });
-        }
-
-        return;
+        return interaction.reply({
+          content: "❌ Request denied.",
+          flags: 64
+        });
       }
     }
 
