@@ -5,7 +5,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const namechangeHandler = require("./interactions/namechange");
-const messageFilter = require("./interactions/messageFilter");
+// ❌ Removed messageFilter
 
 
 const {
@@ -24,13 +24,7 @@ const client = new Client({
   ]
 });
 
-client.on("messageCreate", async (message) => {
-  try {
-    await messageFilter(message);
-  } catch (error) {
-    console.error("❌ Message filter error:", error);
-  }
-});
+// ❌ Removed messageCreate listener for messageFilter
 
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -97,56 +91,56 @@ client.once(Events.ClientReady, async () => {
    INTERACTION HANDLER
    =============================== */
 
-    client.on(Events.InteractionCreate, async interaction => {
-      try {
+client.on(Events.InteractionCreate, async interaction => {
+  try {
 
-        // SLASH COMMANDS
-        if (interaction.isChatInputCommand()) {
-          const command = client.commands.get(interaction.commandName);
-          if (!command) return;
+    // SLASH COMMANDS
+    if (interaction.isChatInputCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) return;
 
-          await Promise.resolve(command.execute(interaction));
-        }
+      await Promise.resolve(command.execute(interaction));
+    }
 
-        // BUTTONS
-        else if (interaction.isButton()) {
+    // BUTTONS
+    else if (interaction.isButton()) {
 
-          await namechangeHandler(interaction);
-          if (interaction.replied || interaction.deferred) return;
+      await namechangeHandler(interaction);
+      if (interaction.replied || interaction.deferred) return;
 
-          for (const handler of buttonHandlers) {
-            await handler(interaction);
-            if (interaction.replied || interaction.deferred) break;
-          }
-        }
-
-        // MODALS
-        else if (interaction.isModalSubmit()) {
-
-          await namechangeHandler(interaction);
-          if (interaction.replied || interaction.deferred) return;
-
-          for (const handler of modalHandlers) {
-            await handler(interaction);
-            if (interaction.replied || interaction.deferred) break;
-          }
-        }
-
-      } catch (error) {
-        console.error("❌ Interaction error:", error);
-
-        try {
-          if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-              content: "❌ An unexpected error occurred.",
-              ephemeral: true
-            }).catch(() => {});
-          }
-        } catch (err) {
-          console.error("❌ Failed to send error response:", err);
-        }
+      for (const handler of buttonHandlers) {
+        await handler(interaction);
+        if (interaction.replied || interaction.deferred) break;
       }
-    });
+    }
+
+    // MODALS
+    else if (interaction.isModalSubmit()) {
+
+      await namechangeHandler(interaction);
+      if (interaction.replied || interaction.deferred) return;
+
+      for (const handler of modalHandlers) {
+        await handler(interaction);
+        if (interaction.replied || interaction.deferred) break;
+      }
+    }
+
+  } catch (error) {
+    console.error("❌ Interaction error:", error);
+
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: "❌ An unexpected error occurred.",
+          ephemeral: true
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("❌ Failed to send error response:", err);
+    }
+  }
+});
 
 /* ===============================
    LOGIN
